@@ -13,6 +13,7 @@ namespace FeedForwardWithGeneticAlgorithm
 
         // A list of all the perceptions in the network.
         public List<Perception> Perceptions { get; set; }
+        public int Generation =0;
         public Guid Id { get; set; }
         public double Fitness { get; set; }
         private Random random = new Random();
@@ -144,7 +145,7 @@ namespace FeedForwardWithGeneticAlgorithm
                         sum += Perceptions.First(x => x.Id == connection.InId).Output * connection.Weight;
                     }
                 }
-                Perceptions[i].Output = ActivationRelu( sum + Perceptions[i].Bias) ;
+                Perceptions[i].Output = ActivationSigmoid( sum + Perceptions[i].Bias) ;
             }
 
             var result = Perceptions.Where(x => x.Type == PerceptionType.Output).Select(x =>x.Output ).ToList();

@@ -1,40 +1,32 @@
 using FeedForwardWithGeneticAlgorithm;
 using System.Collections.Generic;
 using UnityEngine;
-using Palmmedia.ReportGenerator.Core.Common;
-using JetBrains.Annotations;
-using System.Text;
-using System.Threading.Tasks;
 
 [RequireComponent(typeof(CharacterController))]
 public class AIScript : MonoBehaviour
 {
-    public float walkingSpeed = 7.5f;
-    public float runningSpeed = 10f;
+    public float baseRunningSpeed = 10f;
     public float jumpSpeed = 8.0f;
     public float gravity = 20.0f;
     public Camera camera;
     public float lookSpeed = 2.0f;
-    public float lookXLimit = 45.0f;
-
-    NeuralNetwork NN ;
+    [HideInInspector]
+    public NeuralNetwork NN ;
 
     CharacterController characterController;
     Vector3 moveDirection = Vector3.zero;
-    float rotationX = 0;
     [HideInInspector]
     public bool canMove = true;
+    [HideInInspector]
+    public float speed;
     // Start is called before the first frame update
-    void Start()
+    public void Start()
     {
         characterController = GetComponent<CharacterController>();
-        NN = new NeuralNetwork(camera.targetTexture.width * camera.targetTexture.height, 3);
+        NN = new NeuralNetwork(camera.targetTexture.width * camera.targetTexture.height, 4);
         // Lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-
-
     }
     float Mapping(float min, float max, float newMin, float newMax, float value)
     {
@@ -44,7 +36,7 @@ public class AIScript : MonoBehaviour
     void Update()
     {
         var dir = GetDirections();
-
+        speed =Mathf.Abs((float) dir[3]);
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
         float curSpeedX = Mapping(0, 1, -1, 1, (float)dir[0]);
@@ -55,16 +47,14 @@ public class AIScript : MonoBehaviour
         {
             moveDirection.y -= gravity * Time.deltaTime;
         }
-        characterController.Move(moveDirection * runningSpeed * Time.deltaTime);
+
+        characterController.Move((baseRunningSpeed * speed) * Time.deltaTime * moveDirection);
         moveDirection.y = 0;
 
 
         if (canMove)
         {
-            rotationX += -Mapping(0, 1, -1, 1, (float)dir[2]) * lookSpeed;
-            rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
-            // playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-            transform.rotation *= Quaternion.Euler(0, Mapping(0, 1, -1, 1, Mathf.PerlinNoise(Time.time, 0.0f)) * lookSpeed, 0);
+            transform.rotation *= Quaternion.Euler(0, Mapping(0, 1, -1, 1, (float)dir[2]) * lookSpeed, 0);
         }
     }
 
@@ -85,6 +75,14 @@ public class AIScript : MonoBehaviour
         return dir;
     }
 
+    public NeuralNetwork GetNN()
+    {
+        return NN;
+    }
+    public void SetNN(NeuralNetwork nn)
+    {
+         NN=nn;
+    }
     Texture2D RTImage()
     {
         // The Render Texture in RenderTexture.active is the one
@@ -96,7 +94,7 @@ public class AIScript : MonoBehaviour
         camera.Render();
 
         // Make a new texture and read the active Render Texture into it.
-        Texture2D image = new Texture2D(camera.targetTexture.width, camera.targetTexture.height);
+        Texture2D image = new(camera.targetTexture.width, camera.targetTexture.height);
         image.ReadPixels(new Rect(0, 0, camera.targetTexture.width, camera.targetTexture.height), 0, 0);
         image.Apply();
 

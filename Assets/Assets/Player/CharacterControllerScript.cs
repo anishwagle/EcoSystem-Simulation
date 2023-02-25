@@ -16,10 +16,10 @@ public class CharacterControllerScript : MonoBehaviour
 
     CharacterController characterController;
     Vector3 moveDirection = Vector3.zero;
-    float rotationX = 0;
+    float rotationX = 29;
 
     [HideInInspector]
-    public bool canMove = true;
+    public bool canMove = false;
 
     void Start()
     {
@@ -56,7 +56,10 @@ public class CharacterControllerScript : MonoBehaviour
             moveDirection.y = -jumpSpeed;
 
         }
-
+        if(Input.GetKey(KeyCode.Escape))
+        {
+            canMove = !canMove;
+        }
         // Apply gravity. Gravity is multiplied by deltaTime twice (once here, and once below
         // when the moveDirection is multiplied by deltaTime). This is because gravity should be applied
         // as an acceleration (ms^-2)

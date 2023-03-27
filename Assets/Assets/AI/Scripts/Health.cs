@@ -88,7 +88,7 @@ public class Health : MonoBehaviour
             Destroy(gameObject);
             var tran = transform.position;
             tran.y = 0.7f;
-            Instantiate(food, transform.position, transform.rotation);
+            Instantiate(food, tran, transform.rotation);
         }
     }
     float CalculateHealth()

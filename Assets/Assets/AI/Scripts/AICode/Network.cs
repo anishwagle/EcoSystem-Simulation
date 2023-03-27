@@ -17,8 +17,8 @@ namespace FeedForwardWithGeneticAlgorithm
         public Guid Id { get; set; }
         public double Fitness { get; set; }
         private Random random = new Random();
-        private int inputLength;
-        private int outputLength;
+        public int inputLength;
+        public int outputLength;
 
         // Initializes a new instance of the NeuralNetwork class.
         public NeuralNetwork() {
@@ -172,12 +172,12 @@ namespace FeedForwardWithGeneticAlgorithm
             switch (condition)
             {
                 case 0:
-                    var inputs = Perceptions.Where(x => x.Type == PerceptionType.Input || x.Type == PerceptionType.Hidden);
-                    var outputs = Perceptions.Where(x => x.Type == PerceptionType.Output || x.Type == PerceptionType.Hidden);
+                    var inputs = Perceptions.Where(x => x.Type == PerceptionType.Input || x.Type == PerceptionType.Hidden).ToList();
+                    var outputs = Perceptions.Where(x => x.Type == PerceptionType.Output || x.Type == PerceptionType.Hidden).ToList();
                     var inputIndex = random.Next(0, inputs.Count());
                     var outputIndex = random.Next(0, outputs.Count());
 
-                    AddConnection(inputs.ElementAt(inputIndex).Id, outputs.ElementAt(outputIndex).Id);
+                    AddConnection(inputs[inputIndex].Id, outputs[outputIndex].Id);
                     break;
 
                 case 1:

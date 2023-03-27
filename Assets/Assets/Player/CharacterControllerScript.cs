@@ -6,18 +6,18 @@ using UnityEngine;
 
 public class CharacterControllerScript : MonoBehaviour
 {
-    public float walkingSpeed = 7.5f;
-    public float runningSpeed = 11.5f;
+    public float walkingSpeed = 15f;
+    public float runningSpeed = 25f;
     public float jumpSpeed = 8.0f;
     public float gravity = 20.0f;
     public Camera playerCamera;
-    public float lookSpeed = 2.0f;
-    public float lookXLimit = 45.0f;
+    public float lookSpeed = 50.0f;
+    public float lookXLimit = 360f;
 
     CharacterController characterController;
     Vector3 moveDirection = Vector3.zero;
-    float rotationX = 29;
-
+    float rotationX = 40;
+    int index = 0;
     [HideInInspector]
     public bool canMove = false;
 
@@ -56,7 +56,34 @@ public class CharacterControllerScript : MonoBehaviour
             moveDirection.y = -jumpSpeed;
 
         }
-        if(Input.GetKey(KeyCode.Escape))
+        
+        
+        if (Input.GetKey(KeyCode.Keypad1))
+        {
+            Time.timeScale = 1.0f;
+        }
+        if (Input.GetKey(KeyCode.Keypad2))
+        {
+            Time.timeScale = 2.0f;
+        }
+        if (Input.GetKey(KeyCode.Keypad3))
+        {
+            Time.timeScale = 3.0f;
+        }
+        if (Input.GetKey(KeyCode.Keypad0))
+        {
+            Time.timeScale = 10f;
+        }
+        if (Input.GetKey(KeyCode.Keypad5))
+        {
+            Time.timeScale = 5f;
+        }
+        if (Input.GetKey("p"))
+        {
+            PlayerPrefs.DeleteAll();
+
+        }
+        if (Input.GetKey(KeyCode.Escape))
         {
             canMove = !canMove;
         }
@@ -77,8 +104,8 @@ public class CharacterControllerScript : MonoBehaviour
         {
             rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
             rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
-            playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+            playerCamera.transform.localRotation = Quaternion.Euler(x: rotationX, y: 0, z: 0);
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed , 0);
         }
     }
 }

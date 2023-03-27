@@ -8,7 +8,7 @@ public class LifeTime : MonoBehaviour
     
     void Start()
     {
-        var timeToLive = Random.Range(10f, 20f);
+        var timeToLive = Random.Range(30f, 60f);
         Destroy(gameObject,timeToLive);
         
     }

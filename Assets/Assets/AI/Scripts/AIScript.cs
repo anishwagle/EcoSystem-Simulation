@@ -1,5 +1,6 @@
 using FeedForwardWithGeneticAlgorithm;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -9,9 +10,11 @@ public class AIScript : MonoBehaviour
     public float jumpSpeed = 8.0f;
     public float gravity = 20.0f;
     public Camera camera;
-    public float lookSpeed = 2.0f;
+    public float lookSpeed = 200.0f;
     [HideInInspector]
     public NeuralNetwork NN ;
+    [HideInInspector]
+    public int generation;
 
     CharacterController characterController;
     Vector3 moveDirection = Vector3.zero;
@@ -23,7 +26,9 @@ public class AIScript : MonoBehaviour
     public void Start()
     {
         characterController = GetComponent<CharacterController>();
-        NN = new NeuralNetwork(camera.targetTexture.width * camera.targetTexture.height, 4);
+        var renderTexture = RenderTexture.GetTemporary(new RenderTextureDescriptor(10,10));
+        camera.targetTexture= renderTexture;
+        NN ??= new NeuralNetwork(camera.targetTexture.width * camera.targetTexture.height, 4);
         // Lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -54,7 +59,7 @@ public class AIScript : MonoBehaviour
 
         if (canMove)
         {
-            transform.rotation *= Quaternion.Euler(0, Mapping(0, 1, -1, 1, (float)dir[2]) * lookSpeed, 0);
+            transform.rotation *= Quaternion.Euler(0, Mapping(0, 1, -1, 1, (float)dir[2]) * lookSpeed * Time.deltaTime, 0);
         }
     }
 
@@ -75,13 +80,20 @@ public class AIScript : MonoBehaviour
         return dir;
     }
 
-    public NeuralNetwork GetNN()
+    public NeuralNetwork GetChildNN()
     {
-        return NN;
+        var child = new NeuralNetwork(NN.inputLength,NN.outputLength);
+        child.Generation = NN.Generation + 1;
+        child.Perceptions = NN.Perceptions.Select(x=>x).ToList();
+        child.Connections= NN.Connections.Select(x => x).ToList();
+        return child;
     }
     public void SetNN(NeuralNetwork nn)
     {
-         NN=nn;
+        generation = nn.Generation;
+        NN.Generation = generation;
+        NN.Perceptions=nn.Perceptions.Select(x => x).ToList();
+        NN.Connections = nn.Connections.Select(x => x).ToList();
     }
     Texture2D RTImage()
     {

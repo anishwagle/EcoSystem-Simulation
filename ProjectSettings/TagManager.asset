@@ -7,11 +7,12 @@ TagManager:
   - Food
   - AI
   - Genetal
+  - Head
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player
   - Water
   - UI
   - 

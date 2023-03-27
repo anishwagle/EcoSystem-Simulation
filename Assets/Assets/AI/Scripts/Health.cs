@@ -1,7 +1,10 @@
 using FeedForwardWithGeneticAlgorithm;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,54 +12,66 @@ public class Health : MonoBehaviour
 {
     public float health;
     public float maxHealth;
-    private AIScript aIScript;
+    private RayCaster aIScript;
     private int foodCount;
     private int requiredFoodCount = 0;
-    private int requiredSFoodCount = 2;
+    private int requiredSFoodCount = 5;
     public Slider healthSlider;
     public TextMeshProUGUI name;
-
-    private int lifeLived = 0;
-    private int lifeLivedDays = 0;
+    public Canvas canvas;
+    public int aiCount = 5;
+    private float lifeLivedDays = 0;
     public GameObject ai;
+    public GameObject food;
+    Camera camera;
+
     // Start is called before the first frame update
     void Start()
     {
+        camera = Camera.main;
         health = maxHealth;
         healthSlider.value = CalculateHealth();
-        aIScript = GetComponent<AIScript>();
-        name.text = gameObject.name;
+        aIScript = GetComponentInChildren<RayCaster>();
+        canvas.worldCamera = camera;
+        name.text = $"{gameObject.name}::{lifeLivedDays + aIScript.bonusFitness}::{foodCount}";
     }
 
     // Update is called once per frame
     void Update()
     {
-        Camera camera = Camera.main;
+        
         healthSlider.transform.LookAt(transform.position + camera.transform.rotation * Vector3.forward, camera.transform.rotation * Vector3.up);
         name.transform.LookAt(transform.position + camera.transform.rotation * Vector3.forward, camera.transform.rotation * Vector3.up);
-        lifeLivedDays++;
-        if(lifeLivedDays == 10000)
-        {
-            lifeLivedDays = 0;
-            lifeLived++;
-        }
+
         
-        health -= Time.deltaTime*(1+aIScript.speed);
+        name.text = $"{gameObject.name}::{Math.Floor( lifeLivedDays) + aIScript.bonusFitness}::{foodCount }";
+        lifeLivedDays += Time.deltaTime;
+        health -= Time.deltaTime*(1 + aIScript.speed/100);
+        
         healthSlider.value = CalculateHealth();
         if (health <= 0)
         {
-            var ais = JsonUtility.FromJson<List<NeuralNetwork>>( PlayerPrefs.GetString("AiList"));
-           
-            var ai= aIScript.GetNN();
-            ai.Fitness = lifeLived;
-            ais.OrderBy(x=>x.Fitness).ToList();
-            if (ais.Last().Fitness < ai.Fitness)
+            var ais = JsonConvert.DeserializeObject<List<NeuralNetwork>>(PlayerPrefs.GetString("AiList"));
+            ais ??= new List<NeuralNetwork>();
+            
+            var ai= aIScript.GetChildNN();
+            ai.Fitness = lifeLivedDays +aIScript.bonusFitness;
+            ai.Generation = aIScript.generation;
+            ais = ais.OrderByDescending(x=>x.Fitness).ToList();
+            if(ais.Count < aiCount)
+            {
+                ais.Add(ai);
+                PlayerPrefs.SetString("AiList", JsonConvert.SerializeObject(ais));
+                PlayerPrefs.Save();
+            }
+            else if (ais.Last()?.Fitness < ai.Fitness)
             {
                 ais.Remove(ais.Last());
                 ais.Add(ai);
+                PlayerPrefs.SetString("AiList", JsonConvert.SerializeObject(ais));
+                PlayerPrefs.Save();
             }
-            PlayerPrefs.SetString("AiList",JsonUtility.ToJson(ais));
-            PlayerPrefs.Save();
+            
             Destroy(gameObject);
         }
         if(health>maxHealth)
@@ -64,6 +79,17 @@ public class Health : MonoBehaviour
             health = maxHealth;
         }
         
+    }
+    public void Damage(float damage)
+    {
+        health -= damage;
+        if (health < 0)
+        {
+            Destroy(gameObject);
+            var tran = transform.position;
+            tran.y = 0.7f;
+            Instantiate(food, transform.position, transform.rotation);
+        }
     }
     float CalculateHealth()
     {
@@ -77,53 +103,55 @@ public class Health : MonoBehaviour
             other.gameObject.SetActive(false);
             health += 10;
             foodCount++;
+            lifeLivedDays+=Time.deltaTime;
             if (foodCount >= requiredSFoodCount)
             {
-
-                foodCount -= requiredFoodCount;
+                lifeLivedDays += 1;
+                foodCount -= requiredSFoodCount;
                 var tran = transform.position;
-                tran.z = Random.Range(-1f, 1f) * 40;
-                tran.x = Random.Range(-1f, 1f) * 40;
+                tran.z = UnityEngine.Random.Range(-1f, 1f) * 40;
+                tran.x = UnityEngine.Random.Range(-1f, 1f) * 40;
                 tran.y = 0f;
-                var parent1AiScript = GetComponent<AIScript>();
-                parent1AiScript.Start();
+                var parent1AiScript = GetComponentInChildren<RayCaster>();
 
-                var childNN = parent1AiScript.GetNN();
+                var childNN = parent1AiScript.GetChildNN();
                 childNN.Mutation();
                 var child = Instantiate(ai, tran, transform.rotation);
-                var childAiScript = child.GetComponent<AIScript>();
-                childNN.Generation++;
+                var childAiScript = child.GetComponentInChildren<RayCaster>();
+                childAiScript.Start();
+                //childNN.Generation = parent1AiScript.generation + 1;
 
                 childAiScript.SetNN(childNN);
-                child.name = $"S-{childNN.Id}";
+                child.name = $"S-{childAiScript.generation}\n{System.Guid.NewGuid().ToString()[..5]}\n";
             }
         }
 
-        if (other.gameObject.CompareTag("Genetal"))
+        if (other.gameObject.CompareTag("Head"))
         {
             if(other?.transform?.parent?.GetInstanceID() != transform?.GetInstanceID())
             {
                 if(foodCount>=requiredFoodCount)
                 {
-                    foodCount=foodCount-requiredFoodCount;
+                    foodCount-=requiredFoodCount;
+                    lifeLivedDays += Time.deltaTime+3;
+
                     health += 35;
                     var tran = transform.position;
-                    tran.z += Random.Range(-1f, 1f) * 40;
-                    tran.x += Random.Range(-1f, 1f) * 40;
+                    tran.z += UnityEngine.Random.Range(-1f, 1f) * 80;
+                    tran.x += UnityEngine.Random.Range(-1f, 1f) * 80;
                     tran.y = 0f;
-                    var parent1AiScript = GetComponent<AIScript>();
-                    var parent2AiScript = other.transform.parent.GetComponent<AIScript>();
-                    parent1AiScript.Start();
-                    parent2AiScript.Start();
-                    var nn2 = parent2AiScript.GetNN();
-                    var nn1 = parent1AiScript.GetNN();
+                    var parent1AiScript = GetComponentInChildren<RayCaster>();
+                    var parent2AiScript = other.transform.parent.GetComponentInChildren<RayCaster>();
+                    var nn2 = parent2AiScript.GetChildNN();
+                    var nn1 = parent1AiScript.GetChildNN();
                     var childNN = nn1.CrossOver(nn2);
                     childNN.Mutation();
                     var child = Instantiate(ai, tran, transform.rotation);
-                    var childAiScript = child.GetComponent<AIScript>();
-                    childNN.Generation = nn1.Generation+1;
+                    var childAiScript = child.GetComponentInChildren<RayCaster>();
+                    childAiScript.Start();
+                    childNN.Generation = parent1AiScript.generation + 1;
                     childAiScript.SetNN(childNN);
-                    child.name = $"G-{childNN.Generation}";
+                    child.name = $"G-{childAiScript.generation}\n{System.Guid.NewGuid().ToString()[..5]}\n";
 
                 }
             }
